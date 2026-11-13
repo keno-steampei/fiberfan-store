@@ -1,3 +1,4 @@
+import { translations, type Language } from '../translations';
 import { CartIcon } from './FiberFanIcons/CartIcon';
 import { CloseIcon } from './FiberFanIcons/CloseIcon';
 import { InfoIcon } from './FiberFanIcons/InfoIcon';
@@ -13,6 +14,7 @@ interface CartDrawerProps {
   readonly onRemoveItem: (itemId: string) => void;
   readonly onSelectImpactItem: (item: any) => void;
   readonly onExport: () => void;
+  readonly lang?: Language; // Language prop to determine which translation to use
 }
 
 export function CartDrawer({
@@ -22,7 +24,8 @@ export function CartDrawer({
   onUpdateQuantity,
   onRemoveItem,
   onSelectImpactItem,
-  onExport
+  onExport,
+  lang = 'en',
 }: CartDrawerProps) {
   if (!isOpen) return null;
 
@@ -36,8 +39,8 @@ export function CartDrawer({
           {/* Header */}
           <div className="p-6 bg-[#7757a5] text-white flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white">Selected Garments Outfit ({cart.length})</h2>
-              <p className="text-[11px] text-purple-200 font-medium">💡 Click any item below to view full lifecycle impact breakdown</p>
+              <h2 className="text-base font-bold text-white">{translations[lang].yourOutfitItems} ({cart.length})</h2>
+              <p className="text-[11px] text-purple-200 font-medium">💡 {translations[lang].viewItemImpact}</p>
             </div>
             <button onClick={onClose} className="text-white/80 hover:text-white p-1">
               <CloseIcon />
@@ -78,7 +81,7 @@ export function CartDrawer({
                         className="text-[10px] text-[#1a8dcd] hover:underline flex items-center space-x-1 mt-0.5 font-semibold"
                       >
                         <InfoIcon />
-                        <span>View Impact Information</span>
+                        <span>{translations[lang].viewItemInfo}</span>
                       </button>
                     </div>
 
@@ -106,8 +109,8 @@ export function CartDrawer({
             ) : (
               <div className="text-center py-16 text-slate-500 text-xs space-y-2">
                 <CartIcon />
-                <p>No garments in your outfit selection yet.</p>
-                <p className="text-[11px] text-slate-400">Select garments on the main store page to build your collection.</p>
+                <p>{translations[lang].emptyCartTitle}</p>
+                <p className="text-[11px] text-slate-400">{translations[lang].emptyCartDesc}</p>
               </div>
             )}
           </div>
@@ -116,14 +119,14 @@ export function CartDrawer({
           {cart.length > 0 && (
             <div className="p-6 border-t border-slate-200 bg-slate-50 space-y-4">
               <div className="flex justify-between text-sm font-bold text-slate-900">
-                <span>Total Estimated Price</span>
+                <span>{translations[lang].totalCost}</span>
                 <span className="text-[#1a8dcd]">${totalAmount.toFixed(2)}</span>
               </div>
               <button
                 onClick={onExport}
                 className="w-full py-3 bg-[#f6861f] hover:bg-[#e27613] text-white font-extrabold text-xs rounded-xl transition shadow-md"
               >
-                Export Selection & Impact Data (Summary Receipt)
+                {translations[lang].exportReceiptBtn}
               </button>
             </div>
           )}

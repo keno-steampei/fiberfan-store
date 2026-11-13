@@ -8,142 +8,13 @@ import { SearchIcon } from './components/FiberFanIcons/SearchIcon';
 import { GarmentImpactModal } from './components/GarmentImpactModal';
 import { ImpactReceiptModal } from './components/ImpactReceiptModal';
 import { ProductCard } from './components/ProductCard';
-import { DEFAULT_CSV_DATA, DEFAULT_CSV_URL, LOCAL_STORAGE_GSHEET_DATA_KEY, LOCAL_STORAGE_GSHEET_URL_KEY } from './constants';
+import { DEFAULT_CSV_DATA, DEFAULT_SHEET_URLS, LOCAL_STORAGE_GSHEET_DATA_KEY, LOCAL_STORAGE_GSHEET_URL_KEY } from './constants';
 import type { Product } from './types';
+import { convertToCSVUrl, parseCSV } from './utility';
+import { translations, type Language } from './translations';
+import { useLanguage } from './context/LanguageContext';
+import { LanguageToggle } from './components/LanguageToggle';
 
-// ==========================================
-// UTILITY FUNCTIONS
-// ==========================================
-// const convertToCSVUrl = (url) => {https://docs.google.com/spreadsheets/d/e/2PACX-1vR8MZPrvX5l1VwozCXcqF4-9SFBC9uu53XaLlh24nNhxuokZj_b1t0nQ4oRcWx6oA/pubhtml?gid=288112212&single=true
-//   if (!url) return '';
-//   if (url.includes('docs.google.com/spreadsheets')) {
-//     const matches = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-//     if (matches && matches[1]) {
-//       const sheetId = matches[1];
-//       let gid = '0';
-//       const gidMatch = url.match(/gid=([0-9]+)/);
-//       if (gidMatch && gidMatch[1]) {
-//         gid = gidMatch[1];
-//       }
-//       return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-//     }
-//   }
-//   return url;
-// };
-// Robust conversion helper handling BOTH "Publish to web" and standard Share links
-const convertToCSVUrl = (url: string) => {
-  if (!url) return '';
-  const trimmed = url.trim();
-
-  // 1. If it's already a "Publish to web" CSV link, return as-is
-  if (trimmed.includes('/pub?') && trimmed.includes('output=csv')) {
-    return trimmed;
-  }
-
-  // 2. If it's a "Publish to web" standard link, convert output to csv
-  if (trimmed.includes('/pubhtml') || trimmed.includes('/pub?')) {
-    return trimmed.replace(/\/pubhtml.*/, '/pub?output=csv').replace(/output=[^&]+/, 'output=csv');
-  }
-
-  // 3. Handle standard Google Sheet edit/share URLs (/d/SHEET_ID/edit...)
-  const sheetIdMatch = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (sheetIdMatch && sheetIdMatch[1]) {
-    const sheetId = sheetIdMatch[1];
-    const gidMatch = trimmed.match(/[?&]gid=([0-9]+)/);
-    const gidParam = gidMatch ? `&gid=${gidMatch[1]}` : '';
-    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gidParam}`;
-  }
-
-  return trimmed;
-};
-
-const parseCSV = (csvText: string): { [key: string]: string }[] | any => {
-  if (!csvText) return [];
-  const lines = [];
-  let currentLine = [];
-  let currentToken = '';
-  let insideQuotes = false;
-
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    const nextChar = csvText[i + 1];
-
-    if (char === '"') {
-      if (insideQuotes && nextChar === '"') {
-        currentToken += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-    } else if (char === ',' && !insideQuotes) {
-      currentLine.push(currentToken.trim());
-      currentToken = '';
-    } else if ((char === '\r' || char === '\n') && !insideQuotes) {
-      if (char === '\r' && nextChar === '\n') {
-        i++;
-      }
-      currentLine.push(currentToken.trim());
-      if (currentLine.some((cell) => cell.length > 0)) {
-        lines.push(currentLine);
-      }
-      currentLine = [];
-      currentToken = '';
-    } else {
-      currentToken += char;
-    }
-  }
-
-  if (currentToken.length > 0 || currentLine.length > 0) {
-    currentLine.push(currentToken.trim());
-    lines.push(currentLine);
-  }
-
-  if (lines.length < 2) return [];
-
-  const headers = lines[0].map((h) => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-
-  return lines.slice(1).map((row, index) => {
-    const rawMap: { [key: string]: string } = {};
-    headers.forEach((header, colIndex) => {
-      rawMap[header] = row[colIndex] || '';
-    });
-
-    const getVal = (possibleKeys: string[], fallback = '') => {
-      for (const k of possibleKeys) {
-        const cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (rawMap[cleanK] !== undefined && rawMap[cleanK] !== '') {
-          return rawMap[cleanK];
-        }
-      }
-      return fallback;
-    };
-
-    const price = parseFloat(getVal(['Price', 'price'], '0')) || 0;
-    const durability = parseInt(getVal(['Durability (1–5)', 'Durability (1-5)', 'Durability', 'durability'], '3'), 10) || 3;
-
-    return {
-      id: index + 1,
-      clothingItem: getVal(['Clothing item', 'ClothingItem', 'title', 'name'], `Garment ${index + 1}`),
-      category: getVal(['Category', 'category'], 'Apparel'),
-      materialComposition: getVal(['Material / composition', 'Material/composition', 'Material'], 'Standard Fiber'),
-      fiberType: getVal(['Fiber type', 'FiberType', 'fiber'], 'Blended Fiber'),
-      exampleMadeIn: getVal(['Example made in', 'ExampleMadeIn', 'made in', 'origin'], 'Sourced globally'),
-      waterImpact: getVal(['Water impact', 'WaterImpact'], 'Standard water footprint'),
-      climateImpact: getVal(['Climate impact', 'ClimateImpact'], 'Standard carbon impact'),
-      durability: Math.min(Math.max(durability, 1), 5),
-      expectedUsefulLife: getVal(['Expected useful life', 'ExpectedUsefulLife', 'useful life'], '1-3 years'),
-      repairability: getVal(['Repairability', 'repairability'], 'Moderate'),
-      endOfLifeOptions: getVal(['End-of-life options', 'EndOfLifeOptions', 'end of life'], 'Recycling / Landfill'),
-      keyEnvironmentalPoint: getVal(['Key environmental point', 'KeyEnvironmentalPoint'], 'Environmental impact varies across lifecycle.'),
-      price: price,
-      publicImageUrl: getVal(['Public image url', 'PublicImageUrl', 'image', 'url'], 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80')
-    };
-  });
-};
-
-// ==========================================
-// MAIN APPLICATION COMPONENT (App.jsx)
-// ==========================================
 export default function App() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [googleSheetUrl, setGoogleSheetUrl] = useState('');
@@ -162,7 +33,7 @@ export default function App() {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   // Cart / Selection
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState<any[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
   const notify = (msg: string) => {
@@ -170,24 +41,41 @@ export default function App() {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  const fetchGoogleSheetData = async (urlToFetch: string) => {
-    const inputUrl = urlToFetch || googleSheetUrl;
+  // Dynamic storage keys per language
+  const getStorageUrlKey = (l: Language) => `fiberfan_sheet_url_${l}`;
+  const getStorageCsvKey = (l: Language) => `fiberfan_csv_data_${l}`;
+
+  // Inside your App component:
+  const { lang, toggleLanguage, t } = useLanguage();
+
+  // Helper to map existing cart items to newly loaded language products by row index
+  const syncCartToNewProducts = (newProducts: Product[]) => {
+    setCart((prevCart) =>
+      prevCart
+        .map((item) => {
+          // Extract row index from id format `garment-{index}`
+          const match = item.product.id.match(/^garment-(\d+)/);
+          const rowIndex = match ? parseInt(match[1], 10) : -1;
+          const translatedProduct = rowIndex >= 0 ? newProducts[rowIndex] : undefined;
+          return translatedProduct ? { ...item, product: translatedProduct } : item;
+        })
+    );
+  };
+
+  const fetchGoogleSheetData = async (urlToFetch?: string, targetLang: Language = lang) => {
+    const inputUrl = urlToFetch || googleSheetUrl || DEFAULT_SHEET_URLS[targetLang];
     const targetUrl = convertToCSVUrl(inputUrl);
 
     if (!targetUrl) {
-      notify('Please enter a valid Google Spreadsheet URL');
+      notify(targetLang === 'fr' ? 'Veuillez entrer une URL valide' : 'Please enter a valid Google Spreadsheet URL');
       return;
     }
 
     setLoading(true);
     try {
-      let csvText = '';
-      
-      // Primary Fetch Attempt
       let response = await fetch(targetUrl);
 
-      // Fallback: If standard fetch fails due to CORS restrictions on export links,
-      // fetch using a CORS proxy (e.g., corsproxy.io)
+      // Fallback CORS proxy if direct fetch fails
       if (!response.ok) {
         const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
         response = await fetch(proxyUrl);
@@ -195,64 +83,84 @@ export default function App() {
 
       if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to fetch CSV data`);
 
-      csvText = await response.text();
+      const csvText = await response.text();
 
-      // Check if Google returned an HTML login page instead of actual CSV data
       if (csvText.trim().toLowerCase().startsWith('<!doctype html') || csvText.includes('<html')) {
         throw new Error(
-          'Received HTML instead of CSV. Ensure your sheet is set to "Anyone with the link can view" or use "File > Share > Publish to web".'
+          targetLang === 'fr'
+            ? 'Page HTML reçue au lieu du CSV. Vérifiez les permissions de partage.'
+            : 'Received HTML instead of CSV. Ensure your sheet is public or published to web.'
         );
       }
 
       const parsed = parseCSV(csvText);
 
       if (parsed && parsed.length > 0) {
-        localStorage.setItem(LOCAL_STORAGE_GSHEET_URL_KEY, inputUrl);
-        localStorage.setItem(LOCAL_STORAGE_GSHEET_DATA_KEY, csvText);
+        localStorage.setItem(getStorageUrlKey(targetLang), inputUrl);
+        localStorage.setItem(getStorageCsvKey(targetLang), csvText);
         setProducts(parsed);
+        syncCartToNewProducts(parsed);
+        // setRawCsv(csvText);
         setIsDataModalOpen(false);
-        notify(`Loaded ${parsed.length} eco garments!`);
-      } else {
-        notify('Spreadsheet loaded, but no valid CSV rows were found.');
       }
     } catch (err: any) {
       console.error('Fetch error:', err);
-      notify(err.message || 'Error fetching Google Sheet. Make sure permissions are correct.');
+      notify(err.message || 'Error fetching Google Sheet');
     } finally {
       setLoading(false);
     }
   };
 
   // Initial Load & Local Storage Sync
+  // Triggered on initial mount AND whenever `lang` changes
   useEffect(() => {
-    const savedUrl = localStorage.getItem(LOCAL_STORAGE_GSHEET_URL_KEY) || DEFAULT_CSV_URL;
-    const cachedData = localStorage.getItem(LOCAL_STORAGE_GSHEET_DATA_KEY);
+    // Reset category filter back to 'All' so French/English category names don't clash
+    setSelectedCategory('All');
 
-    if (savedUrl) {
-      // 1. If user previously saved a custom URL, use it
+    const savedUrl = localStorage.getItem(getStorageUrlKey(lang));
+    const savedCsv = localStorage.getItem(getStorageCsvKey(lang));
+
+    if (savedUrl && savedCsv) {
       setGoogleSheetUrl(savedUrl);
-      if (cachedData) {
-        setProducts(parseCSV(cachedData));
-      } else {
-        fetchGoogleSheetData(savedUrl);
-      }
+      // setRawCsv(savedCsv);
+      const parsed = parseCSV(savedCsv, lang);
+      setProducts(parsed);
+      syncCartToNewProducts(parsed);
     } else {
-      // 2. HARDCODED DEFAULT: Automatically fetch the default spreadsheet on first load
-      setGoogleSheetUrl(DEFAULT_CSV_URL);
-      fetchGoogleSheetData(DEFAULT_CSV_URL);
+      const urlToLoad = savedUrl || DEFAULT_SHEET_URLS[lang];
+      setGoogleSheetUrl(urlToLoad);
+      fetchGoogleSheetData(urlToLoad, lang);
     }
+  }, [lang]);
+  // useEffect(() => {
+  //   const savedUrl = localStorage.getItem(LOCAL_STORAGE_GSHEET_URL_KEY) || DEFAULT_CSV_URL;
+  //   const cachedData = localStorage.getItem(LOCAL_STORAGE_GSHEET_DATA_KEY);
 
-    if (savedUrl && cachedData) {
-      const parsed = parseCSV(cachedData);
-      if (parsed.length > 0) {
-        setProducts(parsed);
-        return;
-      }
-    }
+  //   if (savedUrl) {
+  //     // 1. If user previously saved a custom URL, use it
+  //     setGoogleSheetUrl(savedUrl);
+  //     if (cachedData) {
+  //       setProducts(parseCSV(cachedData));
+  //     } else {
+  //       fetchGoogleSheetData(savedUrl);
+  //     }
+  //   } else {
+  //     // 2. HARDCODED DEFAULT: Automatically fetch the default spreadsheet on first load
+  //     setGoogleSheetUrl(DEFAULT_CSV_URL);
+  //     fetchGoogleSheetData(DEFAULT_CSV_URL);
+  //   }
 
-    const fallbackParsed = parseCSV(DEFAULT_CSV_DATA);
-    setProducts(fallbackParsed);
-  }, []);
+  //   if (savedUrl && cachedData) {
+  //     const parsed = parseCSV(cachedData);
+  //     if (parsed.length > 0) {
+  //       setProducts(parsed);
+  //       return;
+  //     }
+  //   }
+
+  //   const fallbackParsed = parseCSV(DEFAULT_CSV_DATA);
+  //   setProducts(fallbackParsed);
+  // }, []);
 
   // const fetchGoogleSheetData = async (urlToFetch) => {
   //   const targetUrl = convertToCSVUrl(urlToFetch || googleSheetUrl);
@@ -400,7 +308,6 @@ export default function App() {
                 data-original="https://static.tildacdn.net/tild6331-3264-4236-b532-633238303935/Logo_Container.svg"
                 src="https://static.tildacdn.net/tild6331-3264-4236-b532-633238303935/Logo_Container.svg"
                 alt="" />
-              {/* <LeafIcon /> */}
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-tight">FiberFan Online</span>
@@ -415,7 +322,7 @@ export default function App() {
             </div>
             <input
               type="text"
-              placeholder="Search fibers, eco metrics, clothing..."
+              placeholder={translations[lang].searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 focus:border-[#1a8dcd] rounded-full outline-none text-slate-800 placeholder-slate-400 transition"
@@ -429,12 +336,13 @@ export default function App() {
 
           {/* Action Header Buttons */}
           <div className="flex items-center space-x-2">
+            <LanguageToggle lang={lang} toggleLanguage={toggleLanguage} />
             <button
               onClick={() => setIsDataModalOpen(true)}
               className="flex items-center space-x-1.5 text-xs font-medium px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 transition"
             >
               <DatabaseIcon />
-              <span className="hidden md:inline">Data Source</span>
+              <span className="hidden md:inline">{translations[lang].dataSourceBtn}</span>
             </button>
 
             <button
@@ -458,11 +366,11 @@ export default function App() {
         <div className="mb-6 p-6 rounded-2xl bg-gradient-to-r from-[#7757a5] via-[#1a8dcd] to-slate-900 text-white border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
           <div className="max-w-2xl space-y-2">
             <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30">
-              Educational Interactive Storefront
+              {translations[lang].heroBadge}
             </span>
-            <h2 className="text-2xl font-extrabold">How does your wardrobe impact the planet?</h2>
+            <h2 className="text-2xl font-extrabold">{translations[lang].heroTitle}</h2>
             <p className="text-xs text-purple-100 leading-relaxed">
-              Add garments to your selection outfit. Open the <strong>Selected Garments Cart</strong> to reveal deep lifecycle metrics: water consumption, carbon intensity, durability, and end-of-life recyclability.
+              {translations[lang].heroDescription}
             </p>
           </div>
         </div>
@@ -486,16 +394,16 @@ export default function App() {
           </div>
 
           <div className="flex items-center justify-between sm:justify-end space-x-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-200">
-            <span className="text-xs font-medium text-slate-500">Sort by:</span>
+            <span className="text-xs font-medium text-slate-500">{translations[lang].sortByLabel}</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 py-1.5 pl-3 pr-8 rounded-xl outline-none focus:border-[#1a8dcd]"
             >
-              <option value="featured">Featured Order</option>
-              <option value="durability">Highest Durability Score</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
+              <option value="featured">{translations[lang].sortFeatured}</option>
+              <option value="durability">{translations[lang].sortDurability}</option>
+              <option value="price-low">{translations[lang].sortPriceLow}</option>
+              <option value="price-high">{translations[lang].sortPriceHigh}</option>
             </select>
           </div>
         </div>
@@ -511,14 +419,15 @@ export default function App() {
                   product={product}
                   onAddToCart={addToCart}
                   isAdded={isAdded}
+                  lang={lang}
                 />
               );
             })}
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 p-8 my-4">
-            <h3 className="text-lg font-bold text-slate-800">No garments match criteria</h3>
-            <p className="text-slate-500 text-xs max-w-md mx-auto mt-1">Try adjusting search terms or category selection.</p>
+            <h3 className="text-lg font-bold text-slate-800">{translations[lang].noResultsTitle}</h3>
+            <p className="text-slate-500 text-xs max-w-md mx-auto mt-1">{translations[lang].noResultsDesc}</p>
           </div>
         )}
       </main>
@@ -535,6 +444,7 @@ export default function App() {
           setIsCartOpen(false);
           setIsReceiptModalOpen(true); // Triggers Summary Receipt Modal
         }}
+        lang={lang}
       />
 
       {/* Printable Eco-Impact Receipt Modal */}
@@ -543,6 +453,7 @@ export default function App() {
         onClose={() => setIsReceiptModalOpen(false)}
         cart={cart}
         onClearCart={() => setCart([])}
+        lang={lang}
       />
 
       {/* Garment Impact Analysis Modal (Triggered via Cart) */}
@@ -550,6 +461,7 @@ export default function App() {
         product={selectedImpactProduct}
         onClose={() => setSelectedImpactProduct(null)}
         onAddToCart={addToCart}
+        lang={lang}
       />
 
       {/* Data Source Modal Component */}

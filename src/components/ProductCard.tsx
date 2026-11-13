@@ -1,4 +1,5 @@
 
+import { translations, type Language } from "../translations";
 import type { Product } from "../types";
 import { CartIcon } from "./FiberFanIcons/CartIcon";
 import { StarIcon } from "./FiberFanIcons/StarIcon";
@@ -7,12 +8,13 @@ interface ProductCardProps {
   product: Product;
   onAddToCart: (product: any) => void;
   isAdded: boolean; // Indicates if the product is already added to the cart
+  lang?: Language; // Language prop to determine which translation to use
 }
 
 // ==========================================
 // REUSABLE COMPONENT: ProductCard.jsx
 // ==========================================
-export function ProductCard({ product, onAddToCart, isAdded }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, isAdded, lang = 'en' }: ProductCardProps) {
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-[#1a8dcd] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
       <div>
@@ -59,7 +61,7 @@ export function ProductCard({ product, onAddToCart, isAdded }: ProductCardProps)
           </p>
 
           <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-700">
-            <span className="text-[10px] uppercase font-bold text-[#6bb345] block mb-0.5">Key Metric</span>
+            <span className="text-[10px] uppercase font-bold text-[#6bb345] block mb-0.5">{translations[lang].keyEnvPoint}</span>
             <p className="line-clamp-2 leading-snug">"{product.keyEnvironmentalPoint}"</p>
           </div>
         </div>
@@ -76,7 +78,7 @@ export function ProductCard({ product, onAddToCart, isAdded }: ProductCardProps)
           }`}
         >
           <CartIcon />
-          <span>{isAdded ? 'Added to Outfit (+ Add More)' : 'Add to Selection Outfit'}</span>
+          <span>{isAdded ? translations[lang].addedToOutfit : translations[lang].addToOutfit}</span>
         </button>
       </div>
     </div>
