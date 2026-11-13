@@ -33,7 +33,7 @@ export function ImpactReceiptModal({ isOpen, onClose, cart, onClearCart, lang = 
   if (!isOpen || !cart || cart.length === 0) return null;
 
   const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  // const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',

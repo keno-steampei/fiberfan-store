@@ -46,16 +46,14 @@ export default function App() {
   const getStorageCsvKey = (l: Language) => `fiberfan_csv_data_${l}`;
 
   // Inside your App component:
-  const { lang, toggleLanguage, t } = useLanguage();
+  const { lang, toggleLanguage } = useLanguage();
 
   // Helper to map existing cart items to newly loaded language products by row index
   const syncCartToNewProducts = (newProducts: Product[]) => {
     setCart((prevCart) =>
       prevCart
         .map((item) => {
-          // Extract row index from id format `garment-{index}`
-          const match = item.product.id.match(/^garment-(\d+)/);
-          const rowIndex = match ? parseInt(match[1], 10) : -1;
+          const rowIndex = item.id;
           const translatedProduct = rowIndex >= 0 ? newProducts[rowIndex] : undefined;
           return translatedProduct ? { ...item, product: translatedProduct } : item;
         })

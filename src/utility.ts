@@ -32,7 +32,6 @@ export const convertToCSVUrl = (url: string) => {
 };
 
 export const parseCSV = (csvText: string, lang: Language = 'en'): { [key: string]: string }[] | any => {
-  console.log(`Parsing CSV data for language: ${lang}`);
   if (!csvText) return [];
   const lines = [];
   let currentLine = [];
