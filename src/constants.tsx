@@ -1,3 +1,5 @@
+import type { Language } from "./translations";
+
 // Educational Sample CSV Data with precise CSV headers requested
 export const DEFAULT_CSV_DATA = `Clothing item,Category,Material / composition,Fiber type,Example made in,Water impact,Climate impact,Durability (1–5),Expected useful life,Repairability,End-of-life options,Key environmental point,Price,Public image url
 Organic Cotton T-Shirt,Tops,100% GOTS Certified Organic Cotton,Natural plant fiber,Portugal,Low (uses rainfall / 91% less blue water),Low carbon emissions (no synthetic fertilizers),4,3-5 years,High (easy stitching & patching),100% Biodegradable & Compostable,Saves ~2400 liters of water compared to conventional cotton by utilizing rainfed farming.,35.00,https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80
@@ -10,5 +12,9 @@ Upcycled Vintage Denim Jacket,Outerwear,100% Repurposed Vintage Cotton Denim,Nat
 Bamboo Rayon Lounge Pants,Pants,95% Bamboo Rayon / 5% Spandex,Semi-synthetic regenerated cellulose,India,Low agricultural water,High chemical footprint (viscose CS2 process),3,1-3 years,Moderate,Landfill due to spandex elastane blend,Fast-growing crop but heavy chemical solvents are required to break down raw bamboo pulp.,48.00,https://images.unsplash.com/photo-1509551388413-e18d0ac5d495?w=600&q=80`;
 
 export const DEFAULT_CSV_URL=`https://docs.google.com/spreadsheets/d/e/2PACX-1vR8MZPrvX5l1VwozCXcqF4-9SFBC9uu53XaLlh24nNhxuokZj_b1t0nQ4oRcWx6oA/pub?gid=288112212&single=true&output=csv`
-export const LOCAL_STORAGE_GSHEET_URL_KEY = 'eco_store_gsheet_url';
+export const DEFAULT_SHEET_URLS: Record<Language, string> = {
+  en: `https://docs.google.com/spreadsheets/d/e/2PACX-1vR8MZPrvX5l1VwozCXcqF4-9SFBC9uu53XaLlh24nNhxuokZj_b1t0nQ4oRcWx6oA/pub?gid=288112212&single=true&output=csv`,
+  fr: `https://docs.google.com/spreadsheets/d/e/2PACX-1vR8MZPrvX5l1VwozCXcqF4-9SFBC9uu53XaLlh24nNhxuokZj_b1t0nQ4oRcWx6oA/pub?gid=47576143&single=true&output=csv`
+};
+export const LOCAL_STORAGE_GSHEET_URL_KEY = 'fiberfan_sheet_url_en';
 export const LOCAL_STORAGE_GSHEET_DATA_KEY = 'eco_store_gsheet_cached_csv';

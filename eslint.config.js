@@ -19,7 +19,19 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      "@typescript-eslint/no-explicit-any": "off"
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_",
+          "caughtErrorsIgnorePattern": "^_",
+          // allow exporting primitive constants (strings, numbers, booleans)
+          allowConstantExport: true,
+          // treat object-of-components as a component
+          allowCompoundComponents: true,
+        }
+      ]
     }
   },
 ])
