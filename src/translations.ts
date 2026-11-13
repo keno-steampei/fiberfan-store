@@ -5,6 +5,7 @@ export const translations = {
     // Header & Banner
     appTitle: 'Fiber Fan',
     subtitle: 'Clothing & Lifecycle Impact Module',
+    appLogoText: 'Sustaability Matrix',
     dataSourceBtn: 'Data Source',
     heroBadge: 'Educational Sustainability Storefront',
     heroTitle: 'How does your wardrobe impact the planet?',
@@ -108,6 +109,7 @@ export const translations = {
     // Header & Banner
     appTitle: 'Fiber Fan',
     subtitle: "Module d'impact sur le cycle de vie des vêtements",
+    appLogoText: 'Matrice de durabilité',
     dataSourceBtn: 'Source de données',
     heroBadge: 'Vitrine éducative sur la durabilité',
     heroTitle: 'Quel est l’impact de votre garde-robe sur la planète ?',

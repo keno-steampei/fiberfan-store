@@ -309,7 +309,7 @@ export default function App() {
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-tight">FiberFan Online</span>
-              <span className="text-[10px] text-[#1a8dcd] font-semibold uppercase tracking-wider block">Sustainability Matrix</span>
+              <span className="text-[10px] text-[#1a8dcd] font-semibold uppercase tracking-wider block">{translations[lang].appLogoText}</span>
             </div>
           </div>
 
